@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ru.korniltsev.flymenu.FlyInMenuLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                                   android:id="@+id/root"
+                                   android:orientation="vertical"
+                                   android:layout_width="fill_parent"
+                                   android:layout_height="fill_parent"
+                                   android:clickable="false">
+    <ListView
+            android:id="@+id/menu"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:text="MENU"
+            android:textSize="40dp"
+
+            android:cacheColorHint="#76acff"
+            android:background="#76acff"
+
+            android:fadingEdge="none"
+            android:tag="menu"
+            />
+
+
+    <FrameLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:tag="host"
+            android:background="#b8ef95">
+
+        <ListView
+                android:id="@+id/list1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:cacheColorHint="#ffffff"
+                android:background="#ffffff"
+                android:fadingEdge="none"/>
+
+    </FrameLayout>
+
+
+
+</ru.korniltsev.flymenu.FlyInMenuLayout>
+
