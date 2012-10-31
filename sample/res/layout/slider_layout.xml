@@ -5,6 +5,7 @@
               android:orientation="vertical"
               android:layout_width="fill_parent"
               android:layout_height="fill_parent"
-
+              menu:align_menu_right="true"
         menu:menu_margin="50dp"
+        android:id="@+id/menu"
         />

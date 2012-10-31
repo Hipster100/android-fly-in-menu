@@ -16,7 +16,7 @@ public class BaseActivity extends FragmentActivity {
     }
 
     public final void setUpSliding(){
-        setUpSliding(new DoubleSideFlyInMenuLayout(this));
+//        setUpSliding(new DoubleSideFlyInMenuLayout(this));
     }
 
     public final void setUpSliding(int containerId){
@@ -45,6 +45,11 @@ public class BaseActivity extends FragmentActivity {
     }
 
 
+    final public void setMenuOpened() {
+        container.setOpenedOnStart();
+    }
 
-
+    public DoubleSideFlyInMenuLayout getContainer() {
+        return container;
+    }
 }

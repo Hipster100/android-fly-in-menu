@@ -14,5 +14,16 @@ public class MyActivity extends BaseActivity {
         setContentView(R.layout.main);
         setMenuView(R.layout.menu);
         setUpSliding(R.layout.slider_layout);
+        if (savedInstanceState!= null && savedInstanceState.getBoolean("opened", false))
+            setMenuOpened();
+
     }
+
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+            outState.putBoolean("opened", getContainer().isOpened());
+    }
+
+
 }

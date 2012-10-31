@@ -2,15 +2,15 @@ package ru.korniltsev.flymenu;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.os.Parcelable;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.ViewConfiguration;
-import android.view.ViewGroup;
+import android.view.*;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.Interpolator;
 import android.widget.Scroller;
 
 /**
@@ -38,6 +38,7 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
 
 
     private Scroller mScroller;
+    private Scroller mMenuScroller;
     /**
      * Animation implementation
      * shifts the views on animation/swiping
@@ -59,7 +60,7 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
 
                 int menuDx;
                 if (isOpened()) {
-                    menuDx = (mAlignMenuRight ? mMenuMargin  : 0) - mMenu.getLeft();
+                    menuDx = (mAlignMenuRight ? mMenuMargin : 0) - mMenu.getLeft();
                 } else {
                     int menuWidth = getWidth() - mMenuMargin;
                     menuDx = (mAlignMenuRight ? mMenuMargin + menuWidth / 2 : -menuWidth / 2) - mMenu.getLeft();
@@ -80,19 +81,6 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
     }
 
 
-    public DoubleSideFlyInMenuLayout(Context context) {
-        super(context);
-        touchArea = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-                44, context.getResources().getDisplayMetrics()
-        );
-        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
-        mScroller = new Scroller(context, new DecelerateInterpolator());
-        int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_MENU_MARGIN,
-                getContext().getResources().getDisplayMetrics());
-        speedThreshold =  TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SPEED_THRESHOLD,
-                getContext().getResources().getDisplayMetrics());
-    }
-
     public DoubleSideFlyInMenuLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
         touchArea = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
@@ -103,8 +91,9 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
         int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_MENU_MARGIN,
                 getContext().getResources().getDisplayMetrics());
         mMenuMargin = margin % 2 == 0 ? margin : margin + 1;
-        speedThreshold =  TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SPEED_THRESHOLD,
-                getContext().getResources().getDisplayMetrics());
+        speedThreshold = ViewConfiguration.get(context).getScaledMinimumFlingVelocity();
+//                TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SPEED_THRESHOLD,
+//                getContext().getResources().getDisplayMetrics());
 
         TypedArray styles = context.obtainStyledAttributes(attrs, R.styleable.DoubleSideFlyInMenuLayout);
         try {
@@ -112,7 +101,6 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
             mMenuMargin = (int) styles.getDimension(R.styleable.DoubleSideFlyInMenuLayout_menu_margin,
                     TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 44,
                             getContext().getResources().getDisplayMetrics()));
-
         } finally {
             styles.recycle();
         }
@@ -149,13 +137,23 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         Log.d(TAG, "onLayout");
-        int menuPerspectiveOffset = (r - l - mMenuMargin) / 2;
+
         if (changed) {
+            int menuWidth = r - l - mMenuMargin;
+            int menuPerspectiveOffset = menuWidth / 2;
             mHost.layout(l, t, r, b);
             if (mAlignMenuRight)
                 mMenu.layout(mMenuMargin + menuPerspectiveOffset, t, r + menuPerspectiveOffset, b);
             else
                 mMenu.layout(l - menuPerspectiveOffset, t, r - mMenuMargin - menuPerspectiveOffset, b);
+
+            if (shouldBeOpenedOnLayout) {
+                int direction = mAlignMenuRight ? -1 : 1;
+                mOffset += direction * menuWidth;
+                mHost.offsetLeftAndRight(direction * menuWidth);
+                mMenu.offsetLeftAndRight(direction * menuPerspectiveOffset);
+            }
+            shouldBeOpenedOnLayout = false;
         }
     }
 
@@ -169,15 +167,17 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
     private int mOffset;
 
 
-    private boolean isOpened() {
+    public boolean isOpened() {
         return mOffset != 0;
     }
 
-    long lastTime;
+
+    VelocityTracker mFlingTracker = VelocityTracker.obtain();
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         int action = ev.getAction() & MotionEvent.ACTION_MASK;
+
 //        if (action != MotionEvent.ACTION_MOVE)
 //        Log.d(TAG, "onIntercept - " + ev.toString());
 
@@ -187,43 +187,53 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
         lastTouchX = (int) ev.getX();
         switch (action) {
             case MotionEvent.ACTION_DOWN:
+                mFlingTracker.clear();
                 if (shouldWaitForSlope(ev)) {
-//                    Log.d(TAG, "Down" + ev.getX());
+
                     mLastDownX = (int) ev.getX();
                     waitSlope = true;
-                    return false;
+                    return isOpened();
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
-                int xShift = (int) (ev.getX() - mLastDownX);
-                boolean rightDirection;
-                if (mAlignMenuRight)
-                    rightDirection = xShift < 0;
-                else
-                    rightDirection = xShift > 0;
-                rightDirection = isOpened() ? !rightDirection : rightDirection;
-
-                if (waitSlope && Math.abs(xShift) > touchSlop && rightDirection) {
-                    mAnimating = true;
-                    return true;
-                }
+                if (checkSlope(ev)) return true;
                 break;
         }
         return false;
     }
 
-    private boolean shouldWaitForSlope(MotionEvent ev) {
-        if (!isOpened() && ((mAlignMenuRight && ev.getX() > getWidth() - touchArea)
-                || (!mAlignMenuRight && ev.getX() < touchArea)))
+    private boolean checkSlope(MotionEvent ev) {
+        boolean rightDirection;
+        int xShift = (int) (ev.getX() - mLastDownX);
+        if (mAlignMenuRight)
+            rightDirection = xShift < 0;
+        else
+            rightDirection = xShift > 0;
+        rightDirection = isOpened() ? !rightDirection : rightDirection;
+
+        if (waitSlope && Math.abs(xShift) > touchSlop && rightDirection) {
+            mAnimating = true;
             return true;
-        if (isOpened() && ((mAlignMenuRight && ev.getX() < getWidth() - mMenu.getWidth())
-                || (!mAlignMenuRight && ev.getX() > mMenu.getWidth())))
-            return true;
+        }
         return false;
     }
 
 
-    float speed = 0;
+    private boolean shouldWaitForSlope(MotionEvent ev) {
+        if (isOpened()) {
+            Rect hostRect = new Rect();
+            mHost.getHitRect(hostRect);
+            if (hostRect.contains((int) ev.getX(), (int) ev.getY()))
+                return true;
+            else
+                return false;
+        } else {
+            if (mAlignMenuRight)
+                return ev.getX() > getWidth() - touchArea;
+            else return ev.getX() < touchArea;
+        }
+
+    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -233,15 +243,17 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
 
         int prevTouchX = lastTouchX;
         lastTouchX = (int) event.getX();
-        long prevTime = lastTime;
-        lastTime = System.currentTimeMillis();
+
+        if (action == MotionEvent.ACTION_DOWN) {
+            mLastDownX = (int) event.getX();
+        }
+
 
         if (mAnimating) {
             switch (action) {
                 case MotionEvent.ACTION_MOVE:
+                    mFlingTracker.addMovement(event);
                     int dx = lastTouchX - prevTouchX;
-                    speed = (dx + 0f) / (lastTime - prevTime);
-
                     if (mOffset + dx < minOffset)
                         dx = minOffset - mOffset;
                     else if (mOffset + dx > maxOffset)
@@ -250,7 +262,9 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
                     shift(dx);
                     break;
                 case MotionEvent.ACTION_UP:
-                    Log.d(TAG, "+" + speed);
+                    mFlingTracker.computeCurrentVelocity(1000);
+                    Log.d(TAG, "speed" + mFlingTracker.getXVelocity());
+                    float speed = mFlingTracker.getXVelocity();
                     if (Math.abs(speed) > speedThreshold) {
                         boolean shouldOpen = speed > 0;
                         if (mAlignMenuRight) shouldOpen = !shouldOpen;
@@ -266,8 +280,34 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
                     }
                     break;
             }
+        } else {
+            switch (action) {
+                case MotionEvent.ACTION_MOVE:
+                    //start animating only after a finger moved more than touchSlop
+                    if (checkSlope(event)) {
+                        mAnimating = true;
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                    //did not start animating
+                    // looks like the user clicked on host view
+                    if (shouldWaitForSlope(event)) {
+                        event.setLocation(mLastDownX, event.getY());
+                        if (shouldWaitForSlope(event))
+                            close();
+                    }
+
+                    break;
+            }
         }
         return true;
+    }
+
+
+    boolean shouldBeOpenedOnLayout;
+
+    public void setOpenedOnStart() {
+        shouldBeOpenedOnLayout = true;
     }
 
     public void toggle() {
@@ -289,6 +329,7 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
      * opens menu
      */
     public void open() {
+
         int maxOffset = mMenu.getWidth() * (mAlignMenuRight ? -1 : 1);
         mScroller.startScroll(mOffset, 0, maxOffset - mOffset, 0,
                 ANIMATION_DURATION);
@@ -303,11 +344,11 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
      */
 
     private void shift(int dx) {
-        dx = dx %2 ==0 ?dx : dx+1;
+        dx = dx % 2 == 0 ? dx : dx + 1;
         mOffset += dx;
         invalidate();
         mHost.offsetLeftAndRight(dx);
-        mMenu.offsetLeftAndRight(dx/2);
+        mMenu.offsetLeftAndRight(dx / 2);
     }
 
     private void findViews() {
@@ -320,9 +361,30 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
     }
 
 
+    private final Paint menuShadow, hostShadow;
+
+    {
+        menuShadow = new Paint();
+        hostShadow = new Paint();
+    }
+
+
     @Override
-    protected Parcelable onSaveInstanceState() {
-        return super.onSaveInstanceState();
+    protected void dispatchDraw(Canvas canvas) {
+        super.dispatchDraw(canvas);
+        setupMenuShadowColor();
+        if (mAlignMenuRight)
+            canvas.drawRect(mOffset + getWidth(), 0f, getRight(), getBottom(), menuShadow);
+        else canvas.drawRect(0f, 0f, mOffset, getBottom(), menuShadow);
+    }
+
+    Interpolator shadowInterpolator = new DecelerateInterpolator();
+
+    private void setupMenuShadowColor() {
+        if (!mAlignMenuRight)
+            menuShadow.setColor((int) (-0xBB * shadowInterpolator.getInterpolation((float) mOffset / maxOffset) + 0xBB) << 24);
+        else
+            menuShadow.setColor((int) (-0xBB * shadowInterpolator.getInterpolation((float) mOffset / minOffset) + 0xBB) << 24);
     }
 
 
