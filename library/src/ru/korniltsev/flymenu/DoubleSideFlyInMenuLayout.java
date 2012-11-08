@@ -8,9 +8,13 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
-import android.view.*;
+import android.view.MotionEvent;
+import android.view.VelocityTracker;
+import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
+import android.widget.RelativeLayout;
 import android.widget.Scroller;
 
 /**
@@ -20,7 +24,7 @@ import android.widget.Scroller;
  * Time: 7:58
  * To change this template use File | Settings | File Templates.
  */
-public class DoubleSideFlyInMenuLayout extends ViewGroup {
+public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
 
     public static final String TAG = "DoubleSideFlyInMenuLayout";
@@ -66,6 +70,7 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
                     menuDx = (mAlignMenuRight ? mMenuMargin + menuWidth / 2 : -menuWidth / 2) - mMenu.getLeft();
                 }
                 mMenu.offsetLeftAndRight(menuDx);
+                requestLayout();
             }
         }
     };
@@ -136,27 +141,46 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        Log.d(TAG, "onLayout");
 
-        if (changed) {
-            int menuWidth = r - l - mMenuMargin;
-            int menuPerspectiveOffset = menuWidth / 2;
-            mHost.layout(l, t, r, b);
-            if (mAlignMenuRight)
+        if (mAnimating)
+            return;
+
+        Log.d(TAG, "LAYOUT");
+        super.onLayout(changed, l, t, r, b);
+        int menuWidth = r - l - mMenuMargin;
+        int menuPerspectiveOffset = menuWidth / 2;
+        mHost.layout(l + mOffset, t, r + mOffset, b);
+        if (mAlignMenuRight) {
+            if (isOpened()) {
+                mMenu.layout(mMenuMargin, t, r, b);
+            } else {
                 mMenu.layout(mMenuMargin + menuPerspectiveOffset, t, r + menuPerspectiveOffset, b);
-            else
-                mMenu.layout(l - menuPerspectiveOffset, t, r - mMenuMargin - menuPerspectiveOffset, b);
-
-            if (shouldBeOpenedOnLayout) {
-                int direction = mAlignMenuRight ? -1 : 1;
-                mOffset += direction * menuWidth;
-                mHost.offsetLeftAndRight(direction * menuWidth);
-                mMenu.offsetLeftAndRight(direction * menuPerspectiveOffset);
             }
-            shouldBeOpenedOnLayout = false;
+        } else {
+            if (isOpened()){
+                mMenu.layout(l , t, r - mMenuMargin, b);
+            } else {
+                mMenu.layout(l - menuPerspectiveOffset, t, r - mMenuMargin - menuPerspectiveOffset, b);
+            }
         }
+
+
+        if (shouldBeOpenedOnLayout && !isOpened()) {
+            int direction = mAlignMenuRight ? -1 : 1;
+            mOffset += direction * menuWidth;
+            mHost.offsetLeftAndRight(direction * menuWidth);
+            mMenu.offsetLeftAndRight(direction * menuPerspectiveOffset);
+        }
+        shouldBeOpenedOnLayout = false;
     }
 
+
+    @Override
+    protected boolean fitSystemWindows(Rect insets) {
+        windowTopInset = insets.top;
+        windowInsetsSet = false;//stfu on you ;( ;(
+        return super.fitSystemWindows(insets);
+    }
 
     private boolean mAnimating;
 
@@ -178,8 +202,8 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         int action = ev.getAction() & MotionEvent.ACTION_MASK;
 
-//        if (action != MotionEvent.ACTION_MOVE)
-//        Log.d(TAG, "onIntercept - " + ev.toString());
+        if (action != MotionEvent.ACTION_MOVE)
+            Log.d(TAG, "onIntercept - " + ev.toString());
 
         if (action == MotionEvent.ACTION_UP)
             waitSlope = false;
@@ -243,6 +267,10 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
 
         int prevTouchX = lastTouchX;
         lastTouchX = (int) event.getX();
+
+        if (action != MotionEvent.ACTION_MOVE)
+            Log.d(TAG, "onTouch - " + event.toString());
+
 
         if (action == MotionEvent.ACTION_DOWN) {
             mLastDownX = (int) event.getX();
@@ -351,6 +379,9 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
         mMenu.offsetLeftAndRight(dx / 2);
     }
 
+    boolean windowInsetsSet = false;
+    int windowTopInset = 0;
+
     private void findViews() {
         mMenu = findViewWithTag("menu");
         mHost = findViewWithTag("host");
@@ -358,6 +389,15 @@ public class DoubleSideFlyInMenuLayout extends ViewGroup {
             throw new IllegalStateException("You should add childs with 'host' and 'menu' tags");
         mMenu.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT));
+        if (!windowInsetsSet) {
+            int left = mMenu.getPaddingLeft();
+            int right = mMenu.getPaddingRight();
+            int top = mMenu.getPaddingTop();
+            int bottom = mMenu.getPaddingBottom();
+            mMenu.setPadding(left, top + windowTopInset, right, bottom);
+            windowInsetsSet = true;
+        }
+
     }
 
 
