@@ -22,7 +22,8 @@ import android.widget.Scroller;
  * User: anatoly
  * Date: 29.10.12
  * Time: 7:58
- * To change this template use File | Settings | File Templates.
+ * TODO gradient shadows http://stackoverflow.com/questions/2936803/how-to-draw-a-smooth-dithered-gradient-on-a-canvas-in-android
+ *
  */
 public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
