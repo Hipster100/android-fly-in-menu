@@ -388,6 +388,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         mHost = findViewWithTag("host");
         if (mMenu == null || mHost == null)
             throw new IllegalStateException("You should add childs with 'host' and 'menu' tags");
+        mHost.setClickable(true);
         mMenu.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT));
         if (!windowInsetsSet) {
