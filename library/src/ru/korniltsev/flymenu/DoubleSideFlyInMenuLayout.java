@@ -23,7 +23,6 @@ import android.widget.Scroller;
  * Date: 29.10.12
  * Time: 7:58
  * TODO gradient shadows http://stackoverflow.com/questions/2936803/how-to-draw-a-smooth-dithered-gradient-on-a-canvas-in-android
- *
  */
 public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
@@ -158,8 +157,8 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
                 mMenu.layout(mMenuMargin + menuPerspectiveOffset, t, r + menuPerspectiveOffset, b);
             }
         } else {
-            if (isOpened()){
-                mMenu.layout(l , t, r - mMenuMargin, b);
+            if (isOpened()) {
+                mMenu.layout(l, t, r - mMenuMargin, b);
             } else {
                 mMenu.layout(l - menuPerspectiveOffset, t, r - mMenuMargin - menuPerspectiveOffset, b);
             }
@@ -178,8 +177,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
     @Override
     protected boolean fitSystemWindows(Rect insets) {
-        windowTopInset = insets.top;
-        windowInsetsSet = false;//stfu on you ;( ;(
+        windowTopInset = insets.top;//TODO this insets should be set on the view itself not menu
         return super.fitSystemWindows(insets);
     }
 
@@ -391,7 +389,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         mHost.setClickable(true);
         mMenu.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT));
-        if (!windowInsetsSet) {
+        if (!windowInsetsSet && windowTopInset != 0) {//TODO
             int left = mMenu.getPaddingLeft();
             int right = mMenu.getPaddingRight();
             int top = mMenu.getPaddingTop();
