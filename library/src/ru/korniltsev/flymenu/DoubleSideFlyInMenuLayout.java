@@ -64,10 +64,12 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
                 int menuDx;
                 if (isOpened()) {
+                    mMenu.setVisibility(View.VISIBLE);
                     menuDx = (mAlignMenuRight ? mMenuMargin : 0) - mMenu.getLeft();
                 } else {
                     int menuWidth = getWidth() - mMenuMargin;
                     menuDx = (mAlignMenuRight ? mMenuMargin + menuWidth / 2 : -menuWidth / 2) - mMenu.getLeft();
+                    mMenu.setVisibility(View.GONE);
                 }
                 mMenu.offsetLeftAndRight(menuDx);
                 requestLayout();
@@ -219,7 +221,10 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (checkSlope(ev)) return true;
+                if (checkSlope(ev)) {
+                    mMenu.setVisibility(View.VISIBLE);
+                    return true;
+                }
                 break;
         }
         return false;
@@ -313,6 +318,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
                     //start animating only after a finger moved more than touchSlop
                     if (checkSlope(event)) {
                         mAnimating = true;
+                        mMenu.setVisibility(View.VISIBLE);
                     }
                     break;
                 case MotionEvent.ACTION_UP:
@@ -356,7 +362,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
      * opens menu
      */
     public void open() {
-
+        mMenu.setVisibility(View.VISIBLE);
         int maxOffset = mMenu.getWidth() * (mAlignMenuRight ? -1 : 1);
         mScroller.startScroll(mOffset, 0, maxOffset - mOffset, 0,
                 ANIMATION_DURATION);
@@ -412,10 +418,10 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     @Override
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
-        setupMenuShadowColor();
-        if (mAlignMenuRight)
-            canvas.drawRect(mOffset + getWidth(), 0f, getRight(), getBottom(), menuShadow);
-        else canvas.drawRect(0f, 0f, mOffset, getBottom(), menuShadow);
+//        setupMenuShadowColor();
+//        if (mAlignMenuRight)
+//            canvas.drawRect(mOffset + getWidth(), 0f, getRight(), getBottom(), menuShadow);
+//        else canvas.drawRect(0f, 0f, mOffset, getBottom(), menuShadow);
     }
 
     Interpolator shadowInterpolator = new DecelerateInterpolator();
