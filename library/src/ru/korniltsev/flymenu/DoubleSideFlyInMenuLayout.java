@@ -42,7 +42,11 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
 
     private Scroller mScroller;
-    private Scroller mMenuScroller;
+
+    /**
+     * useful if you want the menu to be opened on activity creation
+     */
+    boolean shouldBeOpenedOnLayout;
     /**
      * Animation implementation
      * shifts the views on animation/swiping
@@ -168,6 +172,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
 
         if (shouldBeOpenedOnLayout && !isOpened()) {
+            mMenu.setVisibility(View.VISIBLE);
             int direction = mAlignMenuRight ? -1 : 1;
             mOffset += direction * menuWidth;
             mHost.offsetLeftAndRight(direction * menuWidth);
@@ -335,9 +340,6 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         }
         return true;
     }
-
-
-    boolean shouldBeOpenedOnLayout;
 
     public void setOpenedOnStart() {
         shouldBeOpenedOnLayout = true;
