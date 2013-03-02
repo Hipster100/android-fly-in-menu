@@ -1,7 +1,9 @@
 package ru.korniltsev.flymenu;
 
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
@@ -34,15 +36,23 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     private final float touchArea;
     private final int touchSlop;
     private final float speedThreshold;
-
-
     private Scroller mScroller;
     private MenuMode mMenuMode = MenuMode.NORMAL;
-
-    /**
-     * useful if you want the menu to be opened on activity creation
-     */
     boolean shouldBeOpenedOnLayout;
+    private int minOffset;
+    private int maxOffset;
+    private boolean widthSetManually;
+    private int mMenuWidth;
+    private Drawable mShadowDrawable;
+    private boolean mAnimating;
+    private int mLastDownX;
+    private int lastTouchX;
+    private boolean waitSlope;
+    private int mOffset;
+    VelocityTracker mFlingTracker = VelocityTracker.obtain();
+    boolean windowInsetsSet = false;
+    int windowTopInset = 0;
+
 
     /**
      * Animation implementation
@@ -79,11 +89,6 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
             }
         }
     };
-    private int minOffset;
-    private int maxOffset;
-    private boolean widthSetManually;
-    private int mMenuWidth;
-
 
     public DoubleSideFlyInMenuLayout(Context context) {
         super(context);
@@ -99,14 +104,6 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
     }
 
-    /**
-     * simulating animation
-     * changes views offset every 16 ms
-     */
-    private void performAnimation() {
-        postDelayed(mPositionUpdater, ANIMATION_INTERVAL);
-    }
-
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         findViews();
@@ -118,7 +115,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         measureChild(mHost, wms, hms);
 
 
-        if (mMenuMode == MenuMode.NORMAL){
+        if (widthSetManually){
             wms = MeasureSpec.makeMeasureSpec(mMenuWidth, MeasureSpec.EXACTLY);
             hms = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
             measureChild(mMenu, wms, hms);
@@ -133,7 +130,10 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
             minOffset = mAlignMenuRight ? -menuWidth : 0;
             maxOffset = mAlignMenuRight ? 0 : menuWidth;
         }
+
         setMeasuredDimension(width, height);
+        int shadowWidth = mShadowDrawable.getIntrinsicWidth();
+        mShadowDrawable.setBounds(0,0,shadowWidth,getHeight());
     }
 
     @Override
@@ -188,21 +188,6 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         return super.fitSystemWindows(insets);
     }
 
-    private boolean mAnimating;
-
-    private int mLastDownX;
-    private int lastTouchX;
-    private boolean waitSlope;
-
-    private int mOffset;
-
-
-    public boolean isOpened() {
-        return mOffset != 0;
-    }
-
-
-    VelocityTracker mFlingTracker = VelocityTracker.obtain();
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
@@ -233,39 +218,6 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
                 break;
         }
         return false;
-    }
-
-    private boolean checkSlope(MotionEvent ev) {
-        boolean rightDirection;
-        int xShift = (int) (ev.getX() - mLastDownX);
-        if (mAlignMenuRight)
-            rightDirection = xShift < 0;
-        else
-            rightDirection = xShift > 0;
-        rightDirection = isOpened() ? !rightDirection : rightDirection;
-
-        if (waitSlope && Math.abs(xShift) > touchSlop && rightDirection) {
-            mAnimating = true;
-            return true;
-        }
-        return false;
-    }
-
-
-    private boolean shouldWaitForSlope(MotionEvent ev) {
-        if (isOpened()) {
-            Rect hostRect = new Rect();
-            mHost.getHitRect(hostRect);
-            if (hostRect.contains((int) ev.getX(), (int) ev.getY()))
-                return true;
-            else
-                return false;
-        } else {
-            if (mAlignMenuRight)
-                return ev.getX() > getWidth() - touchArea;
-            else return ev.getX() < touchArea;
-        }
-
     }
 
     @Override
@@ -341,35 +293,51 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         return true;
     }
 
-    public void setOpenedOnStart() {
-        shouldBeOpenedOnLayout = true;
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        super.dispatchDraw(canvas);
+        if (isOpened()){
+            drawShadow(canvas);
+        }
     }
 
-    public void toggle() {
-        if (isOpened())
-            close();
-        else open();
+    private boolean checkSlope(MotionEvent ev) {
+        boolean rightDirection;
+        int xShift = (int) (ev.getX() - mLastDownX);
+        if (mAlignMenuRight)
+            rightDirection = xShift < 0;
+        else
+            rightDirection = xShift > 0;
+        rightDirection = isOpened() ? !rightDirection : rightDirection;
+
+        if (waitSlope && Math.abs(xShift) > touchSlop && rightDirection) {
+            mAnimating = true;
+            return true;
+        }
+        return false;
+    }
+
+    private boolean shouldWaitForSlope(MotionEvent ev) {
+        if (isOpened()) {
+            Rect hostRect = new Rect();
+            mHost.getHitRect(hostRect);
+            if (hostRect.contains((int) ev.getX(), (int) ev.getY()))
+                return true;
+            else
+                return false;
+        } else {
+            if (mAlignMenuRight)
+                return ev.getX() > getWidth() - touchArea;
+            else return ev.getX() < touchArea;
+        }
     }
 
     /**
-     * closes menu
+     * simulating animation
+     * changes views offset every 16 ms
      */
-    public void close() {
-        mScroller.startScroll(mOffset, 0, -mOffset, 0, ANIMATION_DURATION);
-        mAnimating = true;
-        performAnimation();
-    }
-
-    /**
-     * opens menu
-     */
-    public void open() {
-        mMenu.setVisibility(View.VISIBLE);
-        int maxOffset = mMenu.getWidth() * (mAlignMenuRight ? -1 : 1);
-        mScroller.startScroll(mOffset, 0, maxOffset - mOffset, 0,
-                ANIMATION_DURATION);
-        mAnimating = true;
-        performAnimation();
+    private void performAnimation() {
+        postDelayed(mPositionUpdater, ANIMATION_INTERVAL);
     }
 
     /**
@@ -387,9 +355,6 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
             mMenu.offsetLeftAndRight(dx / 2);
         }
     }
-
-    boolean windowInsetsSet = false;
-    int windowTopInset = 0;
 
     private void findViews() {
         mMenu = findViewWithTag("menu");
@@ -410,6 +375,60 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
     }
 
+    public void setOpenedOnStart() {
+        shouldBeOpenedOnLayout = true;
+    }
+
+    public boolean isOpened() {
+        return mOffset != 0;
+    }
+
+    /**
+     * opens menu
+     */
+    public void open() {
+        mMenu.setVisibility(View.VISIBLE);
+        int maxOffset = mMenu.getWidth() * (mAlignMenuRight ? -1 : 1);
+        mScroller.startScroll(mOffset, 0, maxOffset - mOffset, 0,
+                ANIMATION_DURATION);
+        mAnimating = true;
+        performAnimation();
+    }
+
+    /**
+     * closes menu
+     */
+    public void close() {
+        mScroller.startScroll(mOffset, 0, -mOffset, 0, ANIMATION_DURATION);
+        mAnimating = true;
+        performAnimation();
+    }
+
+    public void toggle() {
+        if (isOpened())
+            close();
+        else open();
+    }
+
+    private void drawShadow(Canvas canvas) {
+
+        if (mShadowDrawable != null){
+            canvas.save();
+            if (mAlignMenuRight){
+                canvas.translate(getWidth() + mOffset, 0);
+            }else {
+                canvas.translate(mOffset - mShadowDrawable.getIntrinsicWidth(), 0);
+            }
+            mShadowDrawable.draw(canvas);
+            canvas.restore();
+        }
+
+    }
+
+    public void setShadowDrawable(Drawable shadowDrawable) {
+        mShadowDrawable = shadowDrawable;
+
+    }
 
     public void setAlignMenuRight(boolean b) {
         this.mAlignMenuRight = b;

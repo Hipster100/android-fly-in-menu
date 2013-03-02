@@ -18,7 +18,8 @@ public class MyActivity extends BaseActivity {
         DoubleSideFlyInMenuLayout menu = new DoubleSideFlyInMenuLayout(this);
         setUpSliding(menu);
         menu.setMenuWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
-        menu.setAlignMenuRight(true);
+        menu.setShadowDrawable(getResources().getDrawable(R.drawable.shadow));
+//        menu.setAlignMenuRight(true);
         if (savedInstanceState!= null && savedInstanceState.getBoolean("opened", false)){
             setMenuOpened();
         }
