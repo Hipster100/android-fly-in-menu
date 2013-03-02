@@ -26,7 +26,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     private static final int ANIMATION_INTERVAL = 16;
     private static final int ANIMATION_DURATION = 300;
     public static final int DEFAULT_MENU_MARGIN = 44;
-    public static final float DEFAULT_SPEED_THRESHOLD = 0.5f;
+
     private int mMenuMargin;
     private boolean mAlignMenuRight;
     private View mMenu;
@@ -37,11 +37,13 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
 
     private Scroller mScroller;
+    private MenuMode mMenuMode = MenuMode.NORMAL;
 
     /**
      * useful if you want the menu to be opened on activity creation
      */
     boolean shouldBeOpenedOnLayout;
+
     /**
      * Animation implementation
      * shifts the views on animation/swiping
@@ -61,30 +63,26 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
                 mHost.offsetLeftAndRight(hostDX);
                 mOffset = mScroller.getFinalX();
 
-                int menuDx;
-                if (isOpened()) {
-                    mMenu.setVisibility(View.VISIBLE);
-                    menuDx = (mAlignMenuRight ? mMenuMargin : 0) - mMenu.getLeft();
-                } else {
-                    int menuWidth = getWidth() - mMenuMargin;
-                    menuDx = (mAlignMenuRight ? mMenuMargin + menuWidth / 2 : -menuWidth / 2) - mMenu.getLeft();
-                    mMenu.setVisibility(View.GONE);
+                if (mMenuMode == MenuMode.PERSPECTIVE) {
+                    int menuDx;
+                    if (isOpened()) {
+                        mMenu.setVisibility(View.VISIBLE);
+                        menuDx = (mAlignMenuRight ? mMenuMargin : 0) - mMenu.getLeft();
+                    } else {
+                        int menuWidth = getWidth() - mMenuMargin;
+                        menuDx = (mAlignMenuRight ? mMenuMargin + menuWidth / 2 : -menuWidth / 2) - mMenu.getLeft();
+                        mMenu.setVisibility(View.GONE);
+                    }
+                    mMenu.offsetLeftAndRight(menuDx);
                 }
-                mMenu.offsetLeftAndRight(menuDx);
                 requestLayout();
             }
         }
     };
     private int minOffset;
     private int maxOffset;
-
-    /**
-     * simulating animation
-     * changes views offset every 16 ms
-     */
-    private void performAnimation() {
-        postDelayed(mPositionUpdater, ANIMATION_INTERVAL);
-    }
+    private boolean widthSetManually;
+    private int mMenuWidth;
 
 
     public DoubleSideFlyInMenuLayout(Context context) {
@@ -101,6 +99,13 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
     }
 
+    /**
+     * simulating animation
+     * changes views offset every 16 ms
+     */
+    private void performAnimation() {
+        postDelayed(mPositionUpdater, ANIMATION_INTERVAL);
+    }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -111,6 +116,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         int wms = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY);
         int hms = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
         measureChild(mHost, wms, hms);
+
 
         wms = MeasureSpec.makeMeasureSpec(width - mMenuMargin, MeasureSpec.EXACTLY);
         hms = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
@@ -125,26 +131,33 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-
         if (mAnimating)
             return;
 
-        Log.d(TAG, "LAYOUT");
         super.onLayout(changed, l, t, r, b);
         int menuWidth = r - l - mMenuMargin;
-        int menuPerspectiveOffset = menuWidth / 2;
+
         mHost.layout(l + mOffset, t, r + mOffset, b);
-        if (mAlignMenuRight) {
-            if (isOpened()) {
+        int menuPerspectiveOffset = menuWidth / 2;
+        if (mMenuMode == MenuMode.PERSPECTIVE) {
+            if (mAlignMenuRight) {
+                if (isOpened()) {
+                    mMenu.layout(mMenuMargin, t, r, b);
+                } else {
+                    mMenu.layout(mMenuMargin + menuPerspectiveOffset, t, r + menuPerspectiveOffset, b);
+                }
+            } else {
+                if (isOpened()) {
+                    mMenu.layout(l, t, r - mMenuMargin, b);
+                } else {
+                    mMenu.layout(l - menuPerspectiveOffset, t, r - mMenuMargin - menuPerspectiveOffset, b);
+                }
+            }
+        } else {//mode normal mode
+            if (mAlignMenuRight) {
                 mMenu.layout(mMenuMargin, t, r, b);
             } else {
-                mMenu.layout(mMenuMargin + menuPerspectiveOffset, t, r + menuPerspectiveOffset, b);
-            }
-        } else {
-            if (isOpened()) {
                 mMenu.layout(l, t, r - mMenuMargin, b);
-            } else {
-                mMenu.layout(l - menuPerspectiveOffset, t, r - mMenuMargin - menuPerspectiveOffset, b);
             }
         }
 
@@ -154,7 +167,9 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
             int direction = mAlignMenuRight ? -1 : 1;
             mOffset += direction * menuWidth;
             mHost.offsetLeftAndRight(direction * menuWidth);
-            mMenu.offsetLeftAndRight(direction * menuPerspectiveOffset);
+            if (mMenuMode == MenuMode.PERSPECTIVE) {
+                mMenu.offsetLeftAndRight(direction * menuPerspectiveOffset);
+            }
         }
         shouldBeOpenedOnLayout = false;
     }
@@ -351,7 +366,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     }
 
     /**
-     * animation simalation
+     * animation simulation
      *
      * @param dx
      */
@@ -361,7 +376,9 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         mOffset += dx;
         invalidate();
         mHost.offsetLeftAndRight(dx);
-        mMenu.offsetLeftAndRight(dx / 2);
+        if (mMenuMode == MenuMode.PERSPECTIVE) {
+            mMenu.offsetLeftAndRight(dx / 2);
+        }
     }
 
     boolean windowInsetsSet = false;
@@ -387,8 +404,6 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     }
 
 
-
-
     public void setAlignMenuRight(boolean b) {
         this.mAlignMenuRight = b;
     }
@@ -398,5 +413,16 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         invalidate();
     }
 
+    public void setMenuWidth(int width) {
+        widthSetManually = true;
+        mMenuWidth = width;
+    }
 
+    public void setMenuMode(MenuMode menuMode) {
+        mMenuMode = menuMode;
+    }
+
+    public static enum MenuMode {
+        PERSPECTIVE, NORMAL
+    }
 }

@@ -16,13 +16,8 @@ public class BaseActivity extends Activity {
         menu = getLayoutInflater().inflate(resId, null);
     }
 
-    public final void setUpSliding(){
-//        setUpSliding(new DoubleSideFlyInMenuLayout(this));
-    }
 
-    public final void setUpSliding(int containerId){
-        setUpSliding((DoubleSideFlyInMenuLayout) getLayoutInflater().inflate(containerId, null));
-    }
+
 
     public final void setUpSliding(DoubleSideFlyInMenuLayout l){
         container = l;

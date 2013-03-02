@@ -2,6 +2,7 @@ package com.example.sample;
 
 import android.os.Bundle;
 import android.view.Menu;
+import ru.korniltsev.flymenu.DoubleSideFlyInMenuLayout;
 import ru.korniltsev.flymenu.R;
 
 public class MyActivity extends BaseActivity {
@@ -13,9 +14,11 @@ public class MyActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         setMenuView(R.layout.menu);
-        setUpSliding(R.layout.slider_layout);
-        if (savedInstanceState!= null && savedInstanceState.getBoolean("opened", false))
+        DoubleSideFlyInMenuLayout menu = new DoubleSideFlyInMenuLayout(this);
+        setUpSliding(menu);
+        if (savedInstanceState!= null && savedInstanceState.getBoolean("opened", false)){
             setMenuOpened();
+        }
 
     }
 
