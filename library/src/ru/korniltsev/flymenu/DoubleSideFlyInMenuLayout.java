@@ -118,14 +118,21 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         measureChild(mHost, wms, hms);
 
 
-        wms = MeasureSpec.makeMeasureSpec(width - mMenuMargin, MeasureSpec.EXACTLY);
-        hms = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
-        measureChild(mMenu, wms, hms);
+        if (mMenuMode == MenuMode.NORMAL){
+            wms = MeasureSpec.makeMeasureSpec(mMenuWidth, MeasureSpec.EXACTLY);
+            hms = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
+            measureChild(mMenu, wms, hms);
 
-        int menuWidth = width - mMenuMargin;
-        minOffset = mAlignMenuRight ? -menuWidth : 0;
-        maxOffset = mAlignMenuRight ? 0 : menuWidth;
-
+            minOffset = mAlignMenuRight ? -mMenu.getMeasuredWidth() : 0;
+            maxOffset = mAlignMenuRight ? 0 : mMenu.getMeasuredWidth();
+        } else {
+            wms = MeasureSpec.makeMeasureSpec(width - mMenuMargin, MeasureSpec.EXACTLY);
+            hms = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
+            measureChild(mMenu, wms, hms);
+            int menuWidth = width - mMenuMargin;
+            minOffset = mAlignMenuRight ? -menuWidth : 0;
+            maxOffset = mAlignMenuRight ? 0 : menuWidth;
+        }
         setMeasuredDimension(width, height);
     }
 
@@ -155,9 +162,9 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
             }
         } else {//mode normal mode
             if (mAlignMenuRight) {
-                mMenu.layout(mMenuMargin, t, r, b);
+                mMenu.layout(r-l-mMenu.getMeasuredWidth(), t, r, b);
             } else {
-                mMenu.layout(l, t, r - mMenuMargin, b);
+                mMenu.layout(l, t, l+ mMenu.getMeasuredWidth(), b);
             }
         }
 

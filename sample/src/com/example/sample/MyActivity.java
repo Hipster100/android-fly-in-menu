@@ -2,6 +2,7 @@ package com.example.sample;
 
 import android.os.Bundle;
 import android.view.Menu;
+import android.view.ViewGroup;
 import ru.korniltsev.flymenu.DoubleSideFlyInMenuLayout;
 import ru.korniltsev.flymenu.R;
 
@@ -16,6 +17,8 @@ public class MyActivity extends BaseActivity {
         setMenuView(R.layout.menu);
         DoubleSideFlyInMenuLayout menu = new DoubleSideFlyInMenuLayout(this);
         setUpSliding(menu);
+        menu.setMenuWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
+        menu.setAlignMenuRight(true);
         if (savedInstanceState!= null && savedInstanceState.getBoolean("opened", false)){
             setMenuOpened();
         }
