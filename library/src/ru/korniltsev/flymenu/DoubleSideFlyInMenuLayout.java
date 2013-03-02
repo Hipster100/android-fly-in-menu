@@ -132,8 +132,11 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         }
 
         setMeasuredDimension(width, height);
-        int shadowWidth = mShadowDrawable.getIntrinsicWidth();
-        mShadowDrawable.setBounds(0,0,shadowWidth,getHeight());
+
+        if (mShadowDrawable!= null){
+            int shadowWidth = mShadowDrawable.getIntrinsicWidth();
+            mShadowDrawable.setBounds(0,0,shadowWidth,getHeight());
+        }
     }
 
     @Override
