@@ -1,12 +1,13 @@
-package ru.korniltsev.flymenu;
+package com.example.sample;
 
+import android.app.Activity;
 import android.content.res.TypedArray;
-import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.view.ViewGroup;
+import ru.korniltsev.flymenu.DoubleSideFlyInMenuLayout;
 
 
-public class BaseActivity extends FragmentActivity {
+public class BaseActivity extends Activity {
 
     View menu;
     DoubleSideFlyInMenuLayout container;

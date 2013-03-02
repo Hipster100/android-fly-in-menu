@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <declare-styleable name="DoubleSideFlyInMenuLayout">
-        <attr name="align_menu_right" format="boolean" />
-        <attr name="menu_margin" format="dimension"/>
-    </declare-styleable>
-</resources>

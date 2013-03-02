@@ -1,11 +1,7 @@
 package ru.korniltsev.flymenu;
 
 import android.content.Context;
-import android.content.res.TypedArray;
-import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.Rect;
-import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
@@ -13,7 +9,6 @@ import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.Interpolator;
 import android.widget.RelativeLayout;
 import android.widget.Scroller;
 
@@ -92,8 +87,8 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     }
 
 
-    public DoubleSideFlyInMenuLayout(Context context, AttributeSet attrs) {
-        super(context, attrs);
+    public DoubleSideFlyInMenuLayout(Context context) {
+        super(context);
         touchArea = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
                 44, context.getResources().getDisplayMetrics()
         );
@@ -103,26 +98,9 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
                 getContext().getResources().getDisplayMetrics());
         mMenuMargin = margin % 2 == 0 ? margin : margin + 1;
         speedThreshold = ViewConfiguration.get(context).getScaledMinimumFlingVelocity();
-//                TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SPEED_THRESHOLD,
-//                getContext().getResources().getDisplayMetrics());
 
-        TypedArray styles = context.obtainStyledAttributes(attrs, R.styleable.DoubleSideFlyInMenuLayout);
-        try {
-            mAlignMenuRight = styles.getBoolean(R.styleable.DoubleSideFlyInMenuLayout_align_menu_right, false);
-            mMenuMargin = (int) styles.getDimension(R.styleable.DoubleSideFlyInMenuLayout_menu_margin,
-                    TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 44,
-                            getContext().getResources().getDisplayMetrics()));
-        } finally {
-            styles.recycle();
-        }
     }
 
-
-    public void setMenuMargin(int px) {
-        mMenuMargin = px;
-        invalidate();
-        throw new RuntimeException("untested method, remove exception and test!");
-    }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -409,30 +387,15 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     }
 
 
-    private final Paint menuShadow, hostShadow;
 
-    {
-        menuShadow = new Paint();
-        hostShadow = new Paint();
+
+    public void setAlignMenuRight(boolean b) {
+        this.mAlignMenuRight = b;
     }
 
-
-    @Override
-    protected void dispatchDraw(Canvas canvas) {
-        super.dispatchDraw(canvas);
-//        setupMenuShadowColor();
-//        if (mAlignMenuRight)
-//            canvas.drawRect(mOffset + getWidth(), 0f, getRight(), getBottom(), menuShadow);
-//        else canvas.drawRect(0f, 0f, mOffset, getBottom(), menuShadow);
-    }
-
-    Interpolator shadowInterpolator = new DecelerateInterpolator();
-
-    private void setupMenuShadowColor() {
-        if (!mAlignMenuRight)
-            menuShadow.setColor((int) (-0xBB * shadowInterpolator.getInterpolation((float) mOffset / maxOffset) + 0xBB) << 24);
-        else
-            menuShadow.setColor((int) (-0xBB * shadowInterpolator.getInterpolation((float) mOffset / minOffset) + 0xBB) << 24);
+    public void setMenuMargin(int px) {
+        mMenuMargin = px;
+        invalidate();
     }
 
 
