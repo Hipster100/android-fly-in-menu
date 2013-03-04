@@ -4,6 +4,8 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.os.Parcelable;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
@@ -175,8 +177,8 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         if (shouldBeOpenedOnLayout && !isOpened()) {
             mMenu.setVisibility(View.VISIBLE);
             int direction = mAlignMenuRight ? -1 : 1;
-            mOffset += direction * menuWidth;
-            mHost.offsetLeftAndRight(direction * menuWidth);
+            mOffset += direction * mMenu.getMeasuredWidth();
+            mHost.offsetLeftAndRight(direction * mMenu.getMeasuredWidth());
             if (mMenuMode == MenuMode.PERSPECTIVE) {
                 mMenu.offsetLeftAndRight(direction * menuPerspectiveOffset);
             }
@@ -453,5 +455,21 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
     public static enum MenuMode {
         PERSPECTIVE, NORMAL
+    }
+
+
+    @Override
+    protected Parcelable onSaveInstanceState() {
+        Bundle s = new Bundle();
+        s.putBoolean("opened", isOpened());
+        return s;
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Parcelable state) {
+        Bundle s = (Bundle) state;
+        if (s.getBoolean("opened")){
+            shouldBeOpenedOnLayout = true;
+        }
     }
 }
