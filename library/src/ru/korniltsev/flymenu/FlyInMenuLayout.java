@@ -4,7 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-import android.os.Bundle;
+import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -24,10 +24,10 @@ import android.widget.Scroller;
  * Time: 7:58
  * TODO gradient shadows http://stackoverflow.com/questions/2936803/how-to-draw-a-smooth-dithered-gradient-on-a-canvas-in-android
  */
-public class DoubleSideFlyInMenuLayout extends RelativeLayout {
+public class FlyInMenuLayout extends RelativeLayout {
 
 
-    public static final String TAG = "DoubleSideFlyInMenuLayout";
+    public static final String TAG = "FlyInMenuLayout";
     private static final int ANIMATION_INTERVAL = 16;
     private static final int ANIMATION_DURATION = 300;
     public static final int DEFAULT_MENU_MARGIN = 44;
@@ -36,9 +36,9 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     private boolean mAlignMenuRight;
     private View mMenu;
     private View mHost;
-    private final float touchArea;
-    private final int touchSlop;
-    private final float speedThreshold;
+    private float touchArea;
+    private int touchSlop;
+    private float speedThreshold;
     private Scroller mScroller;
     private MenuMode mMenuMode = MenuMode.NORMAL;
     boolean shouldBeOpenedOnLayout;
@@ -68,9 +68,10 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
             mScroller.computeScrollOffset();
             int dx = mScroller.getCurrX() - mOffset;
             shift(dx);
-            if (mScroller.getCurrX() != mScroller.getFinalX())
+            if (mScroller.getCurrX() != mScroller.getFinalX()) {
                 performAnimation();
-            else {
+                mMenu.invalidate();
+            } else {
                 mAnimating = false;
                 int hostDX = mScroller.getFinalX() - mHost.getLeft();
                 mHost.offsetLeftAndRight(hostDX);
@@ -92,9 +93,51 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
             }
         }
     };
+    private Runnable toggleOperation = new Runnable(){
+        @Override
+        public void run() {
+            if (mAnimating)
+                return;
+            if (isOpened())
+                close(false);
+            else open(false);
+        }
+    };
 
-    public DoubleSideFlyInMenuLayout(Context context) {
+    private Runnable closeOperation = new Runnable() {
+        @Override
+        public void run() {
+            mScroller.startScroll(mOffset, 0, -mOffset, 0, ANIMATION_DURATION);
+            mAnimating = true;
+            performAnimation();
+        }
+    };
+
+    private final Runnable openOperation = new Runnable(){
+
+        @Override
+        public void run() {
+            mMenu.setVisibility(View.VISIBLE);
+            int maxOffset = mMenu.getWidth() * (mAlignMenuRight ? -1 : 1);
+            mScroller.startScroll(mOffset, 0, maxOffset - mOffset, 0,
+                    ANIMATION_DURATION);
+            mAnimating = true;
+            performAnimation();
+        }
+    };
+
+
+    public FlyInMenuLayout(Context context) {
         super(context);
+        initView(context);
+    }
+
+    public FlyInMenuLayout(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        initView(context);
+    }
+
+    private void initView(Context context) {
         touchArea = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
                 44, context.getResources().getDisplayMetrics()
         );
@@ -104,12 +147,29 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
                 getContext().getResources().getDisplayMetrics());
         mMenuMargin = margin % 2 == 0 ? margin : margin + 1;
         speedThreshold = ViewConfiguration.get(context).getScaledMinimumFlingVelocity();
-
     }
 
-    public DoubleSideFlyInMenuLayout(Context context, AttributeSet attrs) {
-        this(context);
+    @Override
+    public Parcelable onSaveInstanceState() {
+        Parcelable superState = super.onSaveInstanceState();
+        SavedState ss = new SavedState(superState);
+        ss.openedState = isOpened() ? 1 : 0;
+        return ss;
     }
+
+    @Override
+    public void onRestoreInstanceState(Parcelable state) {
+        if (!(state instanceof SavedState)) {
+            super.onRestoreInstanceState(state);
+            return;
+        }
+        SavedState ss = (SavedState) state;
+        super.onRestoreInstanceState(ss.getSuperState());
+        if (ss.openedState == 1) {
+            shouldBeOpenedOnLayout = true;
+        }
+    }
+
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -122,7 +182,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         measureChild(mHost, wms, hms);
 
 
-        if (widthSetManually){
+        if (widthSetManually) {
             wms = MeasureSpec.makeMeasureSpec(mMenuWidth, MeasureSpec.EXACTLY);
             hms = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
             measureChild(mMenu, wms, hms);
@@ -140,9 +200,9 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
         setMeasuredDimension(width, height);
 
-        if (mShadowDrawable!= null){
+        if (mShadowDrawable != null) {
             int shadowWidth = mShadowDrawable.getIntrinsicWidth();
-            mShadowDrawable.setBounds(0,0,shadowWidth,getHeight());
+            mShadowDrawable.setBounds(0, 0, shadowWidth, getHeight());
         }
     }
 
@@ -172,9 +232,9 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
             }
         } else {//mode normal mode
             if (mAlignMenuRight) {
-                mMenu.layout(r-l-mMenu.getMeasuredWidth(), t, r, b);
+                mMenu.layout(r - l - mMenu.getMeasuredWidth(), t, r, b);
             } else {
-                mMenu.layout(l, t, l+ mMenu.getMeasuredWidth(), b);
+                mMenu.layout(l, t, l + mMenu.getMeasuredWidth(), b);
             }
         }
 
@@ -267,15 +327,15 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
                     if (Math.abs(speed) > speedThreshold) {
                         boolean shouldOpen = speed > 0;
                         if (mAlignMenuRight) shouldOpen = !shouldOpen;
-                        if (shouldOpen) open();
-                        else close();
+                        if (shouldOpen) open(false);
+                        else close(false);
                         Log.d(TAG, "animation by speed");
                     } else {
                         boolean shouldOpen = lastTouchX < getWidth() / 2;
                         shouldOpen = mAlignMenuRight ? shouldOpen : !shouldOpen;
                         if (shouldOpen)
-                            open();
-                        else close();
+                            open(false);
+                        else close(false);
                     }
                     break;
             }
@@ -306,7 +366,7 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     @Override
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
-        if (isOpened()){
+        if (isOpened()) {
             drawShadow(canvas);
         }
     }
@@ -395,38 +455,57 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
 
     /**
      * opens menu
+     * @param delay
+     */
+    public void open(boolean delay) {
+        delay(openOperation, delay);
+    }
+
+    /**
+     * closes menu
+     */
+    public void close(boolean delay) {
+        delay(closeOperation, delay);
+    }
+
+    public void toggle(final boolean delay) {
+        delay(toggleOperation, delay);
+    }
+
+    /**
+     * opens menu
      */
     public void open() {
-        mMenu.setVisibility(View.VISIBLE);
-        int maxOffset = mMenu.getWidth() * (mAlignMenuRight ? -1 : 1);
-        mScroller.startScroll(mOffset, 0, maxOffset - mOffset, 0,
-                ANIMATION_DURATION);
-        mAnimating = true;
-        performAnimation();
+        delay(openOperation, false);
     }
 
     /**
      * closes menu
      */
     public void close() {
-        mScroller.startScroll(mOffset, 0, -mOffset, 0, ANIMATION_DURATION);
-        mAnimating = true;
-        performAnimation();
+        delay(closeOperation, false);
     }
 
     public void toggle() {
-        if (isOpened())
-            close();
-        else open();
+        delay(toggleOperation, false);
     }
+
+    private void delay(Runnable r, boolean delay){
+        if (delay){
+            postDelayed(r, 32);
+        } else {
+            r.run();
+        }
+    }
+
 
     private void drawShadow(Canvas canvas) {
 
-        if (mShadowDrawable != null){
+        if (mShadowDrawable != null) {
             canvas.save();
-            if (mAlignMenuRight){
+            if (mAlignMenuRight) {
                 canvas.translate(getWidth() + mOffset, 0);
-            }else {
+            } else {
                 canvas.translate(mOffset - mShadowDrawable.getIntrinsicWidth(), 0);
             }
             mShadowDrawable.draw(canvas);
@@ -463,18 +542,34 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
     }
 
 
-    @Override
-    protected Parcelable onSaveInstanceState() {
-        Bundle s = new Bundle();
-        s.putBoolean("opened", isOpened());
-        return s;
-    }
+    static class SavedState extends BaseSavedState {
+        int openedState;
 
-    @Override
-    protected void onRestoreInstanceState(Parcelable state) {
-        Bundle s = (Bundle) state;
-        if (s.getBoolean("opened")){
-            shouldBeOpenedOnLayout = true;
+        SavedState(Parcelable superState) {
+            super(superState);
         }
+
+        private SavedState(Parcel in) {
+            super(in);
+            this.openedState = in.readInt();
+        }
+
+        @Override
+        public void writeToParcel(Parcel out, int flags) {
+            super.writeToParcel(out, flags);
+            out.writeInt(this.openedState);
+        }
+
+        //required field that makes Parcelables from a Parcel
+        public static final Parcelable.Creator<SavedState> CREATOR =
+                new Parcelable.Creator<SavedState>() {
+                    public SavedState createFromParcel(Parcel in) {
+                        return new SavedState(in);
+                    }
+
+                    public SavedState[] newArray(int size) {
+                        return new SavedState[size];
+                    }
+                };
     }
 }
