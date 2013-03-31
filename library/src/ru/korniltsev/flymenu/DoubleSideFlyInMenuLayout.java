@@ -6,6 +6,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
@@ -104,6 +105,10 @@ public class DoubleSideFlyInMenuLayout extends RelativeLayout {
         mMenuMargin = margin % 2 == 0 ? margin : margin + 1;
         speedThreshold = ViewConfiguration.get(context).getScaledMinimumFlingVelocity();
 
+    }
+
+    public DoubleSideFlyInMenuLayout(Context context, AttributeSet attrs) {
+        this(context);
     }
 
     @Override
