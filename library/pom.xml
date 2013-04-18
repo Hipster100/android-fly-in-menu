@@ -13,11 +13,30 @@
         <dependency>
             <groupId>android</groupId>
             <artifactId>android</artifactId>
-            <version>4.2_r1</version>
+            <version>4.2.2_r2</version>
             <scope>provided</scope>
         </dependency>
 
     </dependencies>
+
+    
+    <scm>
+        <url>scm:git:http://cvs.lan/android-fly-in-menu.git</url>
+    </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>releases</id>
+            <name>Releases</name>
+            <url>http://mobile.ad/nexus/content/repositories/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>Snapshots</name>
+            <url>http://mobile.ad/nexus/content/repositories/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <build>
         <finalName>${project.artifactId}</finalName>
         <sourceDirectory>src</sourceDirectory>
