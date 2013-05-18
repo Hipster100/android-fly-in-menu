@@ -77,23 +77,28 @@ public class FlyInMenuLayout extends RelativeLayout {
                 mHost.offsetLeftAndRight(hostDX);
                 mOffset = mScroller.getFinalX();
 
+                final boolean opened = isOpened();
                 if (mMenuMode == MenuMode.PERSPECTIVE) {
                     int menuDx;
-                    if (isOpened()) {
-                        mMenu.setVisibility(View.VISIBLE);
+                    if (opened) {
                         menuDx = (mAlignMenuRight ? mMenuMargin : 0) - mMenu.getLeft();
                     } else {
                         int menuWidth = getWidth() - mMenuMargin;
                         menuDx = (mAlignMenuRight ? mMenuMargin + menuWidth / 2 : -menuWidth / 2) - mMenu.getLeft();
-                        mMenu.setVisibility(View.GONE);
                     }
                     mMenu.offsetLeftAndRight(menuDx);
                 }
+                refreshMenuVisbility();
                 requestLayout();
             }
         }
     };
-    private Runnable toggleOperation = new Runnable(){
+
+    private void refreshMenuVisbility() {
+        mMenu.setVisibility(isOpened() ? View.VISIBLE : View.GONE);
+    }
+
+    private Runnable toggleOperation = new Runnable() {
         @Override
         public void run() {
             if (mAnimating)
@@ -113,7 +118,7 @@ public class FlyInMenuLayout extends RelativeLayout {
         }
     };
 
-    private final Runnable openOperation = new Runnable(){
+    private final Runnable openOperation = new Runnable() {
 
         @Override
         public void run() {
@@ -249,6 +254,7 @@ public class FlyInMenuLayout extends RelativeLayout {
             }
         }
         shouldBeOpenedOnLayout = false;
+        refreshMenuVisbility();
     }
 
 
@@ -455,6 +461,7 @@ public class FlyInMenuLayout extends RelativeLayout {
 
     /**
      * opens menu
+     *
      * @param delay
      */
     public void open(boolean delay) {
@@ -490,8 +497,8 @@ public class FlyInMenuLayout extends RelativeLayout {
         delay(toggleOperation, false);
     }
 
-    private void delay(Runnable r, boolean delay){
-        if (delay){
+    private void delay(Runnable r, boolean delay) {
+        if (delay) {
             postDelayed(r, 32);
         } else {
             r.run();
