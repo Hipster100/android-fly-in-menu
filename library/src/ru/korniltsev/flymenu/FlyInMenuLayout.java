@@ -537,6 +537,16 @@ public class FlyInMenuLayout extends RelativeLayout {
         mMenuMode = menuMode;
     }
 
+    @Override
+    public boolean isOpaque() {
+        return true;
+    }
+
+    @Override
+    public boolean hasOverlappingRendering() {
+        return false;
+    }
+
     public static enum MenuMode {
         PERSPECTIVE, NORMAL
     }
